@@ -496,6 +496,7 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
             data[ivm] = node['default:obsidian_glass']
           elseif btype == 3 and y < 81 then
             data[ivm] = node['chaos:weightless_water']
+            --data[ivm] = node['default:water_source']
           elseif btype == 7 and pyr == 71 and y < 81 then
             data[ivm] = node['default:obsidian']
           elseif btype == 7 and y < 81 then
