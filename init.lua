@@ -82,6 +82,72 @@ dofile(chaos.path .. '/schematics.lua')
 dofile(chaos.path .. '/mapgen.lua')
 
 
+local function chaotic_sky(player)
+  player:set_sky("#4070FF", "skybox", {'chaos_sky_1.png', 'chaos_sky_6.png', 'chaos_sky_5.png', 'chaos_sky_3.png', 'chaos_sky_4.png', 'chaos_sky_2.png'})
+  --player:set_sky("#4070FF", "skybox", {'raven_chaos_top.png', 'raven_chaos_bottom.png', 'raven_chaos_right.png', 'raven_chaos_left.png', 'raven_chaos_front.png', 'raven_chaos_back.png'})
+end
+
 minetest.register_on_joinplayer(function(player)
-	player:set_sky("#4070FF", "skybox", {'chaos_sky_1.png', 'chaos_sky_6.png', 'chaos_sky_5.png', 'chaos_sky_3.png', 'chaos_sky_4.png', 'chaos_sky_2.png'})
+  chaotic_sky(player)
+end)
+
+
+players_underground = {}
+players_in_orbit = {}
+local dps_delay = 3
+local last_dps_check = 0
+minetest.register_globalstep(function(dtime)
+  if not (dtime and type(dtime) == 'number') then
+    return
+  end
+
+  if not (players_underground and players_in_orbit) then
+    return
+  end
+
+  local time = minetest.get_gametime()
+  if not (time and type(time) == 'number') then
+    return
+  end
+
+  if last_dps_check and time - last_dps_check < dps_delay then
+    return
+  end
+
+  local players = minetest.get_connected_players()
+  if not (players and type(players) == 'table') then
+    return
+  end
+
+  for i = 1, #players do
+    local player = players[i]
+    local pos = player:getpos()
+    pos = vector.round(pos)
+    local player_name = player:get_player_name()
+
+    if pos.y < -90 then
+      if not players_underground[player_name] then
+        player:set_sky("#000000", "plain")
+        players_underground[player_name] = true
+      end
+    elseif pos.y >= 11168 and pos.y <= 15168 then
+      if not players_in_orbit[player_name] then
+        player:set_physics_override(gravity_off)
+        player:set_sky("#000000", "plain")
+        players_in_orbit[player_name] = true
+      end
+    else
+      if players_in_orbit[player_name] then
+        chaotic_sky(player)
+        minetest.after(20, function()
+          player:set_physics_override(gravity_on)
+        end)
+        players_in_orbit[player_name] = false
+      end
+      if players_underground[player_name] then
+        chaotic_sky(player)
+        players_underground[player_name] = false
+      end
+    end
+  end
 end)

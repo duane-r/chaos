@@ -316,9 +316,9 @@ end
 
 
 chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
-	if not (minp and maxp and data and area and node and type(data) == 'table') then
-		return
-	end
+  if not (minp and maxp and data and area and node and type(data) == 'table') then
+    return
+  end
 
 
   local squaresville_town
@@ -327,9 +327,9 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
   end
 
 
-	local csize = vector.add(vector.subtract(maxp, minp), 1)
-	local map_max = {x = csize.x, y = csize.y + 2, z = csize.z}
-	local map_min = {x = minp.x, y = minp.y - 1, z = minp.z}
+  local csize = vector.add(vector.subtract(maxp, minp), 1)
+  local map_max = {x = csize.x, y = csize.y + 2, z = csize.z}
+  local map_min = {x = minp.x, y = minp.y - 1, z = minp.z}
 
 
   if not (terrain_noise and sea_noise and ground_level_noise) then
@@ -346,9 +346,9 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
   sea_map = sea_noise:get2dMap_flat({x=minp.x, y=minp.z}, sea_map)
   ground_level_map = ground_level_noise:get2dMap_flat({x=minp.x, y=minp.z}, ground_level_map)
 
-	if not (terrain_map and sea_map and ground_level_map) then
-		return
-	end
+  if not (terrain_map and sea_map and ground_level_map) then
+    return
+  end
 
   if not (heat_1_noise and heat_2_noise and humidity_1_noise and humidity_2_noise) then
     heat_1_noise = minetest.get_perlin_map(heat_1_p, {x=csize.x, y=csize.z})
@@ -380,13 +380,13 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
     caves[#caves+1] = {x=math_random(minp.x + 8, maxp.x - 8), y=math_random(minp.y + 8, maxp.y - 8), z=math_random(minp.z + 8, maxp.z - 8), r=math_random(1,20)}
   end
 
-	local index = 0
-	local index3d = 0
+  local index = 0
+  local index3d = 0
   local write
-	for z = minp.z, maxp.z do
-		for x = minp.x, maxp.x do
-			index = index + 1
-			index3d = (z - minp.z) * (csize.y + 2) * csize.x + (x - minp.x) + 1
+  for z = minp.z, maxp.z do
+    for x = minp.x, maxp.x do
+      index = index + 1
+      index3d = (z - minp.z) * (csize.y + 2) * csize.x + (x - minp.x) + 1
       local terrain = math_abs(terrain_map[index])
       local sea_level = sea_map[index]
 
@@ -442,8 +442,8 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
         r2 = 32 + math_floor(tdx / 4) % 3 * 6 + math_floor(tdz / 4) % 3 * 6
       end
 
-			local ivm = area:index(x, maxp.y, z)
-			for y = maxp.y, minp.y, -1 do
+      local ivm = area:index(x, maxp.y, z)
+      for y = maxp.y, minp.y, -1 do
         if terrain < 2 then
           if y <= inv + 32 and y >= inv + 30 then
             if sea_level < y then
@@ -528,9 +528,9 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
           end
         end
 
-				ivm = ivm - area.ystride
-				index3d = index3d + csize.x
-			end
+        ivm = ivm - area.ystride
+        index3d = index3d + csize.x
+      end
 
       if deco then
         if sea_level < deco and biomes[biome_name].special_trees and tree_map[ x .. ',' .. z ] and (biome_name ~= 'savanna' or math.random(20) == 1) then
@@ -546,8 +546,8 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
           end
         end
       end
-		end
-	end
+    end
+  end
 
   if minp.y > -50 and maxp.y < 1000 then
     for i = 1, 4 do
