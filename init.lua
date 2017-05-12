@@ -80,6 +80,7 @@ end
 dofile(chaos.path .. '/nodes.lua')
 dofile(chaos.path .. '/schematics.lua')
 dofile(chaos.path .. '/mapgen.lua')
+dofile(chaos.path .. '/mobs.lua')
 
 
 local function chaotic_sky(player)
