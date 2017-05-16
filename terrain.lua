@@ -6,7 +6,8 @@
 -- floating glass spheres
 
 local max_depth = 31000
-local baseline = 0
+local baseline = chaos.baseline
+local extent_bottom = chaos.extent_bottom
 local lamp_prob = 50
 local tree_spacing = 4
 local river_scale = 15
@@ -59,6 +60,41 @@ function b_rand(s)
   return (x-0.15) * 1 / 0.75 
 end
 
+chaos.decorations = {}
+
+do
+  for _, odeco in pairs(minetest.registered_decorations) do
+    if not odeco.schematic then
+      local deco = {}
+      if odeco.biomes then
+        deco.biomes = {}
+        for _, b in pairs(odeco.biomes) do
+          deco.biomes[b] = true
+        end
+      end
+
+      deco.deco_type = odeco.deco_type
+      deco.decoration = odeco.decoration
+      deco.schematic = odeco.schematic
+      deco.fill_ratio = odeco.fill_ratio
+
+      if odeco.noise_params then
+        deco.fill_ratio = math.max(0.001, (odeco.noise_params.scale + odeco.noise_params.offset) / 4)
+      end
+
+      local nod = minetest.registered_nodes[deco.decoration]
+      if nod and nod.groups and nod.groups.flower then
+        deco.flower = true
+      end
+
+      chaos.decorations[#chaos.decorations+1] = deco
+    end
+  end
+end
+
+chaos.biomes = {}
+local biomes = chaos.biomes
+local biome_names = {}
 do
   local biome_mod = {
     cold_desert = { y_min = 1, },
@@ -97,37 +133,46 @@ do
     tundra_ocean = { y_min = -max_depth, y_max = 0, },
     underground = {},
   }
-  local rereg = {}
 
-  for n, bi in pairs(biome_mod) do
-    for i, rbi in pairs(minetest.registered_biomes) do
-      if rbi.name == n then
-        rereg[#rereg+1] = table.copy(rbi)
-        for j, prop in pairs(bi) do
-          rereg[#rereg][j] = prop
+  do
+    local tree_biomes = {}
+    tree_biomes["deciduous_forest"] = {"apple_tree", 'aspen_tree'}
+    tree_biomes["coniferous_forest"] = {"pine_tree"}
+    tree_biomes["taiga"] = {"pine_tree"}
+    tree_biomes["rainforest"] = {"jungle_tree"}
+    tree_biomes["rainforest_swamp"] = {"jungle_tree"}
+    tree_biomes["coniferous_forest"] = {"pine_tree"}
+    tree_biomes["savanna"] = {"acacia_tree"}
+
+    for i, obiome in pairs(minetest.registered_biomes) do
+      local biome = table.copy(obiome)
+      biome.special_tree_prob = 2 * 25
+
+      if string.match(biome.name, "^rainforest") then
+        biome.special_tree_prob = 0.8 * 25
+      end
+
+      if biome.name == "savanna" then
+        biome.special_tree_prob = 30 * 25
+      end
+
+      biome.special_trees = tree_biomes[biome.name]
+      biomes[biome.name] = biome
+      biome_names[#biome_names+1] = biome.name
+
+      for n, bi in pairs(biome_mod) do
+        for i, rbi in pairs(biomes) do
+          if rbi.name == n then
+            for j, prop in pairs(bi) do
+              biomes[i][j] = prop
+            end
+          end
         end
       end
     end
   end
 
-  minetest.clear_registered_biomes()
-
-  for _, bi in pairs(rereg) do
-    minetest.register_biome(bi)
-  end
-
-  rereg = {}
-  for _, dec in pairs(minetest.registered_decorations) do
-    rereg[#rereg+1] = dec
-  end
-  minetest.clear_registered_decorations()
-  for _, dec in pairs(rereg) do
-    minetest.register_decoration(dec)
-  end
-  rereg = nil
-
-
-  minetest.register_biome({
+  biomes["desertstone_grassland"] = {
     name = "desertstone_grassland",
     --node_dust = "",
     node_top = "default:dirt_with_grass",
@@ -145,10 +190,9 @@ do
     y_max = max_depth,
     heat_point = 80,
     humidity_point = 55,
-  })
+  }
 
-
-  minetest.register_decoration({
+  chaos.decorations[#chaos.decorations+1] = {
     deco_type = "simple",
     place_on = {"default:dirt_with_grass"},
     sidelen = 80,
@@ -157,45 +201,8 @@ do
     y_min = 1,
     y_max = max_depth,
     decoration = "default:junglegrass",
-  })
+  }
 end
-
-
-flowers.register_decorations()
-
-chaos.decorations = {}
-
-do
-  for _, odeco in pairs(minetest.registered_decorations) do
-    if not odeco.schematic then
-      local deco = {}
-      if odeco.biomes then
-        deco.biomes = {}
-        for _, b in pairs(odeco.biomes) do
-          deco.biomes[b] = true
-        end
-      end
-
-      deco.deco_type = odeco.deco_type
-      deco.decoration = odeco.decoration
-      deco.schematic = odeco.schematic
-      deco.fill_ratio = odeco.fill_ratio
-
-      if odeco.noise_params then
-        deco.fill_ratio = math.max(0.001, (odeco.noise_params.scale + odeco.noise_params.offset) / 4)
-      end
-
-      local nod = minetest.registered_nodes[deco.decoration]
-      if nod and nod.groups and nod.groups.flower then
-        deco.flower = true
-      end
-
-      chaos.decorations[#chaos.decorations+1] = deco
-    end
-  end
-end
-
-minetest.clear_registered_decorations()
 
 
 local function register_flower(name, desc, biomes, chance)
@@ -268,38 +275,6 @@ local function register_decoration(deco, place_on, biomes, chance)
 end
 
 
-chaos.biomes = {}
-local biomes = chaos.biomes
-local biome_names = {}
-do
-  local tree_biomes = {}
-  tree_biomes["deciduous_forest"] = {"apple_tree", 'aspen_tree'}
-  tree_biomes["coniferous_forest"] = {"pine_tree"}
-  tree_biomes["taiga"] = {"pine_tree"}
-  tree_biomes["rainforest"] = {"jungle_tree"}
-  tree_biomes["rainforest_swamp"] = {"jungle_tree"}
-  tree_biomes["coniferous_forest"] = {"pine_tree"}
-  tree_biomes["savanna"] = {"acacia_tree"}
-
-  for i, obiome in pairs(minetest.registered_biomes) do
-    local biome = table.copy(obiome)
-    biome.special_tree_prob = 2 * 25
-
-    if string.match(biome.name, "^rainforest") then
-      biome.special_tree_prob = 0.8 * 25
-    end
-
-    if biome.name == "savanna" then
-      biome.special_tree_prob = 30 * 25
-    end
-
-    biome.special_trees = tree_biomes[biome.name]
-    biomes[biome.name] = biome
-    biome_names[#biome_names+1] = biome.name
-  end
-end
-
-
 local function get_decoration(biome_name)
   for i, deco in pairs(chaos.decorations) do
     if not deco.biomes or deco.biomes[biome_name] then
@@ -315,7 +290,7 @@ end
 
 
 
-chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
+chaos.terrain = function(minp, maxp, data, p2data, area, node)
   if not (minp and maxp and data and area and node and type(data) == 'table') then
     return
   end
@@ -388,7 +363,7 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
       index = index + 1
       index3d = (z - minp.z) * (csize.y + 2) * csize.x + (x - minp.x) + 1
       local terrain = math_abs(terrain_map[index])
-      local sea_level = sea_map[index]
+      local sea_level = sea_map[index] + baseline
 
       local inv = (6 - terrain)
       local bot = -2 - inv
@@ -396,7 +371,7 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
       inv = math_ceil(inv + ground_level_map[index] + baseline)
 
       local heat = heat_1_map[index] + heat_2_map[index]
-      local humidity = (humidity_1_map[index] + humidity_2_map[index]) * (2.5 - (sea_level / river_scale)) / 2
+      local humidity = (humidity_1_map[index] + humidity_2_map[index]) * (2.5 - ((sea_level - baseline) / river_scale)) / 2
       humidity_1_map[index] = humidity
 
       local biome_height = math_max(1, inv - baseline)
@@ -436,7 +411,6 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
       local tdx = (x + 80) % 160 - 80
       local tdz = (z + 80) % 160 - 80
       local pyr = math_min(math_abs(80 - (x % 160)), math_abs(80 - (z % 160)))
-      heightmap[index] = pyr - 90
       local r2
       if btype == 4 then
         r2 = 32 + math_floor(tdx / 4) % 3 * 6 + math_floor(tdz / 4) % 3 * 6
@@ -470,15 +444,15 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
           tree_dist = math_floor(math_sqrt(tdx ^ 2 + tdz ^ 2 + (y - 60) ^ 2))
         end
 
-        if btype ~= 6 and y > -97 and pyr > 70 then
+        if btype ~= 6 and y > baseline - 97 and pyr > 70 then
           deco = nil
           if btype == 5 then
-            if y < pyr - 90 then
+            if y < pyr + baseline - 90 then
               data[ivm] = node["air"]
             end
-          elseif y < 80 and pyr >= 79 and btype ~= 3 and btype ~= 7 then
+          elseif y < baseline + 80 and pyr >= 79 and btype ~= 3 and btype ~= 7 then
             data[ivm] = node['chaos:air_ladder']
-          elseif y < 80 and btype < 3 and pyr < 79 and y % 5 == 4 then
+          elseif y < baseline + 80 and btype < 3 and pyr < 79 and (baseline + y) % 5 == 4 then
             if pyr % 3 == 0 and (x % 4 + z % 4 == 0) then
               data[ivm] = node['default:meselamp']
             elseif btype == 0 then
@@ -488,27 +462,27 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
             elseif btype == 2 then
               data[ivm] = node['default:obsidian_glass']
             end
-          elseif btype == 0 and y < 80 and (pyr > 71 or x % 2 == 0 or z % 2 == 0) then
+          elseif btype == 0 and y < baseline + 80 and (pyr > 71 or x % 2 == 0 or z % 2 == 0) then
             data[ivm] = node['air']
-          elseif btype == 0 and y < pyr + 10 then
+          elseif btype == 0 and y < pyr + baseline + 10 then
             data[ivm] = node['default:steelblock']
-          elseif btype == 3 and pyr == 71 and y < 81 then
+          elseif btype == 3 and pyr == 71 and y < baseline + 81 then
             data[ivm] = node['default:obsidian_glass']
-          elseif btype == 3 and y < 81 then
+          elseif btype == 3 and y < baseline + 81 then
             data[ivm] = node['chaos:weightless_water']
             --data[ivm] = node['default:water_source']
-          elseif btype == 7 and pyr == 71 and y < 81 then
+          elseif btype == 7 and pyr == 71 and y < baseline + 81 then
             data[ivm] = node['default:obsidian']
-          elseif btype == 7 and y < 81 then
+          elseif btype == 7 and y < baseline + 81 then
             data[ivm] = node['default:lava_source']
-          elseif btype == 4 and pyr > 71 and y < pyr + 10 and y > -pyr - 17 then
+          elseif btype == 4 and pyr > 71 and y < pyr + baseline + 10 and y > baseline + -pyr - 17 then
             data[ivm] = node['chaos:tree']
-          elseif btype == 4 and ((pyr == 71 and y < pyr + 10 and y > -pyr - 17) or y == pyr + 10 or y == -pyr - 17) then
+          elseif btype == 4 and ((pyr == 71 and y < pyr + baseline + 10 and y > baseline + -pyr - 17) or y == pyr + baseline + 10 or y == baseline + -pyr - 17) then
             data[ivm] = node['chaos:bark']
           else
             data[ivm] = node["air"]
           end
-        elseif data[ivm] == node['air'] and y < -90 + pyr then
+        elseif data[ivm] == node['air'] and y < baseline + -90 + pyr then
           data[ivm] = node['default:stone']
         elseif y <= sea_level and data[ivm] == node['air'] then
           data[ivm] = node[biomes[biome_name].node_water_top or 'default:water_source']
@@ -517,12 +491,12 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
           end
         end
 
-        if tree_dist and tree_dist < r2 and y % 10 == 0 and (math_floor((tdx + 0) / 4) % 3 == 0 or math_floor((tdz + 0) / 4) % 3 == 0) then
+        if tree_dist and tree_dist < r2 and (baseline + y) % 10 == 0 and (math_floor((tdx + 0) / 4) % 3 == 0 or math_floor((tdz + 0) / 4) % 3 == 0) then
           if data[ivm] == node['air'] then
             data[ivm] = node['chaos:bark']
           end
-        elseif tree_dist and tree_dist < r2 and (y + 3) % 10 < 7 and (math_floor((tdx + 3) / 4) % 3 < 2 or math_floor((tdz + 3) / 4) % 3 < 2) then
-          local r = math_abs(((y + 3) % 10) - 3)
+        elseif tree_dist and tree_dist < r2 and (baseline + y + 3) % 10 < 7 and (math_floor((tdx + 3) / 4) % 3 < 2 or math_floor((tdz + 3) / 4) % 3 < 2) then
+          local r = math_abs(((baseline + y + 3) % 10) - 3)
           if (r < 2 or math_random(r) == 1) and data[ivm] == node['air'] then
             data[ivm] = node['chaos:leaves']
           end
@@ -549,11 +523,11 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
     end
   end
 
-  if minp.y > -50 and maxp.y < 1000 then
+  if minp.y > baseline + -50 and maxp.y < baseline + 1000 then
     for i = 1, 4 do
       local center = math_random(3)
 
-      if caves[i].y > 40 and caves[i].x > minp.x + 10 and caves[i].x < maxp.x - 10 and caves[i].y > minp.y + 10 and caves[i].y < maxp.y - 10 and caves[i].z > minp.z + 10 and caves[i].z < maxp.z - 10 then
+      if caves[i].y > baseline + 40 and caves[i].x > minp.x + 10 and caves[i].x < maxp.x - 10 and caves[i].y > minp.y + 10 and caves[i].y < maxp.y - 10 and caves[i].z > minp.z + 10 and caves[i].z < maxp.z - 10 then
         for z = caves[i].z - caves[i].r, caves[i].z + caves[i].r do
           for x = caves[i].x - caves[i].r, caves[i].x + caves[i].r do
             local ivm = area:index(x, caves[i].y - caves[i].r, z)
@@ -587,7 +561,7 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
         local ivm = area:index(x, caves[i].y - caves[i].r, z)
 
         for y = caves[i].y - caves[i].r, caves[i].y + caves[i].r do
-          if y < pyr - 91 and data[ivm] == node['default:stone'] and math_sqrt((x - caves[i].x) ^ 2 + (y - caves[i].y) ^ 2 + (z - caves[i].z) ^ 2) <= caves[i].r then
+          if y < baseline + pyr - 91 and data[ivm] == node['default:stone'] and math_sqrt((x - caves[i].x) ^ 2 + (y - caves[i].y) ^ 2 + (z - caves[i].z) ^ 2) <= caves[i].r then
             data[ivm] = node['air']
           end
 
@@ -602,7 +576,11 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node, heightmap)
       local ivm = area:index(x, minp.y, z)
 
       for y = minp.y, maxp.y do
-        if data[ivm] == node['air'] or data[ivm] == node['chaos:weightless_water'] then
+        if y < baseline + extent_bottom then
+          data[ivm] = node['air']
+        elseif y == baseline + extent_bottom then
+          data[ivm] = node['chaos:bedrock']
+        elseif data[ivm] == node['air'] or data[ivm] == node['chaos:weightless_water'] then
           if data[ivm - area.ystride] == node['default:stone'] and math_random(lamp_prob) == 1 then
             data[ivm - area.ystride] = node['chaos:glowing_fungal_stone']
           end

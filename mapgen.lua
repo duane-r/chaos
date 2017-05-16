@@ -4,16 +4,9 @@
 
 
 local DEBUG
-
-
-chaos.real_get_mapgen_object = minetest.get_mapgen_object
-minetest.get_mapgen_object = function(object)
-  if object == 'heightmap' then
-    return table.copy(chaos.last_heightmap)
-  else
-    return chaos.real_get_mapgen_object(object)
-  end
-end
+local baseline = chaos.baseline
+local extent_bottom = chaos.extent_bottom
+local extent_top = chaos.extent_top
 
 
 -- This table looks up nodes that aren't already stored.
@@ -32,7 +25,6 @@ chaos.node = node
 
 local data = {}
 local p2data = {}  -- vm rotation data buffer
-local heightmap = {}
 
 
 local function generate(p_minp, p_maxp, seed)
@@ -41,6 +33,10 @@ local function generate(p_minp, p_maxp, seed)
   end
 
   local minp, maxp = p_minp, p_maxp
+  if maxp.y < baseline + extent_bottom or minp.y > baseline + extent_top then
+    return
+  end
+
   local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
   if not (vm and emin and emax) then
     return
@@ -52,10 +48,8 @@ local function generate(p_minp, p_maxp, seed)
   local csize = vector.add(vector.subtract(maxp, minp), 1)
 
   for fake_loop = 1, 1 do
-    --chaos.terrain(minp, maxp, data, p2data, area, node, heightmap)
-    chaos.terrain(minp, maxp, data, p2data, area, node, heightmap)
+    chaos.terrain(minp, maxp, data, p2data, area, node)
   end
-  chaos.last_heightmap = heightmap
 
 
   vm:set_data(data)
@@ -90,5 +84,4 @@ local function pgenerate(...)
 end
 
 
--- Inserting helps to ensure that chaos operates first.
-table.insert(minetest.registered_on_generateds, 1, pgenerate)
+minetest.register_on_generated(pgenerate)

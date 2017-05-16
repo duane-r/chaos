@@ -5,6 +5,12 @@
 
 local newnode
 
+newnode = chaos.clone_node("default:stone")
+newnode.diggable = false
+newnode.groups = {}
+minetest.register_node("chaos:bedrock", newnode)
+
+
 newnode = chaos.clone_node("default:water_source")
 newnode.description = "Water"
 newnode.drop = "default:water_source"

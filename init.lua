@@ -8,6 +8,14 @@ chaos.version = '1.0'
 chaos.path = minetest.get_modpath(minetest.get_current_modname())
 chaos.world = minetest.get_worldpath()
 
+chaos.baseline = 5000  -- the altitude of the chaos "dimension"
+chaos.extent_bottom = -500  -- how far down to make the chaos
+chaos.extent_top = 500  -- how far up to make it
+
+local baseline = chaos.baseline
+local extent_bottom = chaos.extent_bottom
+local extent_top = chaos.extent_top
+
 
 if not minetest.set_mapgen_setting then
   return
@@ -15,11 +23,6 @@ end
 
 
 local math_random = math.random
-
-
-minetest.register_on_mapgen_init(function(mgparams)
-  minetest.set_mapgen_params({mgname='singlenode', flags='nolight'})
-end)
 
 
 -- Modify a node to add a group
@@ -88,13 +91,9 @@ local function chaotic_sky(player)
   --player:set_sky("#4070FF", "skybox", {'raven_chaos_top.png', 'raven_chaos_bottom.png', 'raven_chaos_right.png', 'raven_chaos_left.png', 'raven_chaos_front.png', 'raven_chaos_back.png'})
 end
 
-minetest.register_on_joinplayer(function(player)
-  chaotic_sky(player)
-end)
-
 
 players_underground = {}
-players_in_orbit = {}
+players_in_chaos = {}
 local dps_delay = 3
 local last_dps_check = 0
 minetest.register_globalstep(function(dtime)
@@ -102,7 +101,7 @@ minetest.register_globalstep(function(dtime)
     return
   end
 
-  if not (players_underground and players_in_orbit) then
+  if not (players_underground and players_in_chaos) then
     return
   end
 
@@ -126,29 +125,22 @@ minetest.register_globalstep(function(dtime)
     pos = vector.round(pos)
     local player_name = player:get_player_name()
 
-    if pos.y < -90 then
+    if pos.y < baseline - 90 and pos.y > baseline + extent_bottom then
       if not players_underground[player_name] then
         player:set_sky("#000000", "plain")
+        players_in_chaos[player_name] = nil
         players_underground[player_name] = true
       end
-    elseif pos.y >= 11168 and pos.y <= 15168 then
-      if not players_in_orbit[player_name] then
-        player:set_physics_override(gravity_off)
-        player:set_sky("#000000", "plain")
-        players_in_orbit[player_name] = true
-      end
-    else
-      if players_in_orbit[player_name] then
+    elseif pos.y < baseline + extent_top and pos.y >= baseline - 90 then
+      if not players_in_chaos[player_name] then
         chaotic_sky(player)
-        minetest.after(20, function()
-          player:set_physics_override(gravity_on)
-        end)
-        players_in_orbit[player_name] = false
+        players_in_chaos[player_name] = true
+        players_underground[player_name] = nil
       end
-      if players_underground[player_name] then
-        chaotic_sky(player)
-        players_underground[player_name] = false
-      end
+    elseif players_in_chaos[player_name] or players_underground[player_name] then
+      players_in_chaos[player_name] = nil
+      players_underground[player_name] = nil
+      player:set_sky(nil, "regular")
     end
   end
 end)
