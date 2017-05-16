@@ -441,7 +441,7 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node)
 
         local tree_dist
         if btype == 4 then
-          tree_dist = math_floor(math_sqrt(tdx ^ 2 + tdz ^ 2 + (y - 60) ^ 2))
+          tree_dist = math_floor(math_sqrt(tdx ^ 2 + tdz ^ 2 + (y - baseline - 60) ^ 2))
         end
 
         if btype ~= 6 and y > baseline - 97 and pyr > 70 then
