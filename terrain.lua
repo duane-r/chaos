@@ -288,6 +288,20 @@ local function get_decoration(biome_name)
 end
 
 
+chaos.get_btype = function(x, z)
+  local btype = 0
+  local dx = math.floor((x + 80) / 160)
+  local dz = math.floor((z + 80) / 160)
+
+  if dx == 0 and dz == 0 then
+    btype = 0
+  else
+    btype = math_floor(max_btype * b_rand(dz * 991 + dx * 7 + chaos.seed_int))
+  end
+  --btype = 7
+
+  return btype
+end
 
 
 chaos.terrain = function(minp, maxp, data, p2data, area, node)
@@ -396,17 +410,7 @@ chaos.terrain = function(minp, maxp, data, p2data, area, node)
 
       local deco
 
-      local btype = 0
-      do
-        local dx = math.floor((x + 80) / 160)
-        local dz = math.floor((z + 80) / 160)
-        if dx == 0 and dz == 0 then
-          btype = 0
-        else
-          btype = math_floor(max_btype * b_rand(dz * 991 + dx * 7 + chaos.seed_int))
-        end
-      end
-      --btype = 7
+      local btype = chaos.get_btype(x, z)
 
       local tdx = (x + 80) % 160 - 80
       local tdz = (z + 80) % 160 - 80
