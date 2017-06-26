@@ -19,7 +19,6 @@ local function teleport(user)
   for r = 0, 10 do
     local tdx = math.floor((pos.x + 80) / 160) * 160 - 0
     local tdz = math.floor((pos.z + 80) / 160) * 160 - 0
-    print(tdx,tdz)
     for z = tdz - r * 160, tdz + r * 160, 160 do
       for x = tdx - r * 160, tdx + r * 160, 160 do
         local btype = chaos.get_btype(x, z)
