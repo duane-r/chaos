@@ -190,7 +190,7 @@ minetest.register_craft({
 
 if minetest.get_modpath('tnt') then
   minetest.register_craft({
-    output = "tnt:gunpowder",
+    output = "tnt:gunpowder 5",
     type = "shapeless",
     recipe = {"group:coal", "default:gravel"}
   })
